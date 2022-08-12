@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"time"
 
 	"github.com/xcasluw/fullcycle-grpc/pb"
@@ -12,6 +14,7 @@ import (
 // 	AddUser(context.Context, *User) (*User, error)
 // 	mustEmbedUnimplementedUserSeviceServer()
 // AddUserVerbose(ctx context.Context, in *User, opts ...grpc.CallOption) (UserSevice_AddUserVerboseClient, error)
+// AddUsers(ctx context.Context, opts ...grpc.CallOption) (UserSevice_AddUsersClient, error)
 // }
 
 type UserService struct {
@@ -73,4 +76,26 @@ func (*UserService) AddUserVerbose(req *pb.User, stream pb.UserSevice_AddUserVer
 	time.Sleep(time.Second * 3)
 
 	return nil
+}
+
+func (*UserService) AddUsers(stream pb.UserSevice_AddUsersServer) error {
+	users := []*pb.User{}
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&pb.Users{
+				User: users,
+			})
+		}
+		if err != nil {
+			log.Fatal("error receiving stream: %v", err)
+		}
+
+		users = append(users, &pb.User{
+			Id:    req.GetId(),
+			Name:  req.GetName(),
+			Email: req.GetEmail(),
+		})
+		fmt.Println("adding", req.GetName())
+	}
 }
