@@ -15,6 +15,7 @@ import (
 // 	mustEmbedUnimplementedUserSeviceServer()
 // AddUserVerbose(ctx context.Context, in *User, opts ...grpc.CallOption) (UserSevice_AddUserVerboseClient, error)
 // AddUsers(ctx context.Context, opts ...grpc.CallOption) (UserSevice_AddUsersClient, error)
+// AddUserStreamBoth(ctx context.Context, opts ...grpc.CallOption) (UserSevice_AddUserStreamBothClient, error)
 // }
 
 type UserService struct {
@@ -97,5 +98,26 @@ func (*UserService) AddUsers(stream pb.UserSevice_AddUsersServer) error {
 			Email: req.GetEmail(),
 		})
 		fmt.Println("adding", req.GetName())
+	}
+}
+
+func (*UserService) AddUserStreamBoth(stream pb.UserSevice_AddUserStreamBothServer) error {
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			log.Fatal("error receiving stream from the client: %v", err)
+		}
+
+		err = stream.Send(&pb.UserResultStream{
+			Status: "Added",
+			User:   req,
+		})
+
+		if err != nil {
+			log.Fatal("error sending stream to the client: %v", err)
+		}
 	}
 }
